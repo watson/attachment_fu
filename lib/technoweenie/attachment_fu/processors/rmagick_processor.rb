@@ -47,9 +47,9 @@ module Technoweenie # :nodoc:
           end
           img.strip! unless attachment_options[:keep_profile]
           # Set colorspace for thumbnails to RGB. This produces smaller 
-          # files if the original image is in CMYG. Since the thumbnails 
+          # files if the original image is in CMYK. Since the thumbnails 
           # are ment for display on websites this should be just fine
-          img.colorspace = Magick::SRGBColorspace
+          img.colorspace = Magick::RGBColorspace
           temp_paths.unshift write_to_temp_file(img.to_blob(&block))
         end
       end
