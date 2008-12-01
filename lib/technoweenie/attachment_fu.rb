@@ -89,7 +89,7 @@ module Technoweenie # :nodoc:
         # doing these shenanigans so that #attachment_options is available to processors and backends
         self.attachment_options = options
 
-        attr_accessor :thumbnail_resize_options
+        attr_accessor :thumbnail_resize_options, :thumbnail_rmagick_block
 
         attachment_options[:storage]     ||= (attachment_options[:file_system_path] || attachment_options[:path_prefix]) ? :file_system : :db_file
         attachment_options[:storage]     ||= parent_options[:storage]
@@ -272,14 +272,15 @@ module Technoweenie # :nodoc:
       end
 
       # Creates or updates the thumbnail for the current attachment.
-      def create_or_update_thumbnail(temp_file, file_name_suffix, *size)
+      def create_or_update_thumbnail(temp_file, file_name_suffix, *size, &block)
         thumbnailable? || raise(ThumbnailError.new("Can't create a thumbnail if the content type is not an image or there is no parent_id column"))
         returning find_or_initialize_thumbnail(file_name_suffix) do |thumb|
           thumb.temp_paths.unshift temp_file
           thumb.send(:'attributes=', {
             :content_type             => content_type,
             :filename                 => thumbnail_name_for(file_name_suffix),
-            :thumbnail_resize_options => size
+            :thumbnail_resize_options => size,
+            :thumbnail_rmagick_block  => block
           }, false)
           callback_with_args :before_thumbnail_saved, thumb
           thumb.save!
@@ -435,7 +436,13 @@ module Technoweenie # :nodoc:
           if @saved_attachment
             if respond_to?(:process_attachment_with_processing) && thumbnailable? && !attachment_options[:thumbnails].blank? && parent_id.nil?
               temp_file = temp_path || create_temp_file
-              attachment_options[:thumbnails].each { |suffix, size| create_or_update_thumbnail(temp_file, suffix, *size) }
+              attachment_options[:thumbnails].each do |suffix, value|
+                if value.is_a?(Hash)
+                  create_or_update_thumbnail(temp_file, suffix, *value[:size], &value[:proc])
+                else
+                  create_or_update_thumbnail(temp_file, suffix, *value)
+                end
+              end
             end
             save_to_storage
             @temp_paths.clear
@@ -449,7 +456,7 @@ module Technoweenie # :nodoc:
           if (!respond_to?(:parent_id) || parent_id.nil?) && attachment_options[:resize_to] # parent image
             resize_image(img, attachment_options[:resize_to])
           elsif thumbnail_resize_options # thumbnail
-            resize_image(img, thumbnail_resize_options)
+            resize_image(img, thumbnail_resize_options, &thumbnail_rmagick_block)
           end
         end
 
