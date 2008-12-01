@@ -46,6 +46,10 @@ module Technoweenie # :nodoc:
             img.change_geometry(size.to_s) { |cols, rows, image| image.resize!(cols<1 ? 1 : cols, rows<1 ? 1 : rows) }
           end
           img.strip! unless attachment_options[:keep_profile]
+          # Set colorspace for thumbnails to RGB. This produces smaller 
+          # files if the original image is in CMYG. Since the thumbnails 
+          # are ment for display on websites this should be just fine
+          img.colorspace = Magick::SRGBColorspace
           temp_paths.unshift write_to_temp_file(img.to_blob(&block))
         end
       end
