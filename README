@@ -39,6 +39,7 @@ has_attachment(options = {})
     :thumbnails       # Specifies a set of thumbnails to generate.
                       # This accepts a hash of filename suffixes and RMagick resizing options.
                       # This option need only be included if you want thumbnailing.
+                      # For advanced use the hash value can be a nested hash containing both the RMagick resizing options + an RMagick block. This only works if using the RMagick processor. For more info about the RMagick block, see http://www.imagemagick.org/RMagick/doc/info.html
     :thumbnail_class  # Set which model class to use for thumbnails.
                       # This current attachment class is used by default.
     :path_prefix      # path to store the uploaded files.
@@ -59,6 +60,7 @@ has_attachment(options = {})
     has_attachment :content_type => :image, :resize_to => [50,50]
     has_attachment :content_type => ['application/pdf', :image], :resize_to => 'x50'
     has_attachment :thumbnails => { :thumb => [50, 50], :geometry => 'x50' }
+    has_attachment :thumbnails => { :thumb => [50, 50], :geometry => { :size => 'x50', :proc => Proc.new { self.quality = 40 } } }
     has_attachment :storage => :file_system, :path_prefix => 'public/files'
     has_attachment :storage => :file_system, :path_prefix => 'public/files', 
                    :content_type => :image, :resize_to => [50,50], :partition => false
