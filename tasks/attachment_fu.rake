@@ -7,9 +7,9 @@ namespace :attachment_fu do
       ENV['MODELS'].split(',').each do |model|
         with_thumbnails = eval(model).all(:conditions => {:parent_id => nil})
         printf "Regenerating all %s thumbnails (%s total): ", model, with_thumbnails.size
+        STDOUT.flush
         with_thumbnails.each do |r|
           if r.respond_to?(:process_attachment_with_processing) && r.thumbnailable? && !r.attachment_options[:thumbnails].blank? && r.parent_id.nil?
-            print '.'
             temp_file = r.create_temp_file
             r.attachment_options[:thumbnails].each do |suffix, value|
               if value.is_a?(Hash)
@@ -18,10 +18,11 @@ namespace :attachment_fu do
                 r.create_or_update_thumbnail(temp_file, suffix, *value)
               end
             end
+            print '.'
           else
             print '!'
-            next
           end
+          STDOUT.flush
         end
         puts
       end
