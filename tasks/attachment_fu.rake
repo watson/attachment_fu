@@ -1,27 +1,26 @@
 namespace :attachment_fu do
-  desc "Regenerate the thumbnails belonging to the models supplied with the 'models' environment variable"
+  desc "Regenerate the thumbnails belonging to the models supplied with the MODELS environment variable (seperate with comma)"
   task :regenerate_thumbnails => :environment do
-    if ENV['models'].nil?
-      puts "ERROR: You have to set the 'models' environment variable!"
+    if ENV['MODELS'].nil?
+      puts "ERROR: You have to set the MODELS environment variable!"
     else
-      ENV['models'].split(',').each do |model|
-        print "Regenerating all #{model} thumbnails"
-        with_thumbnails = eval(model).all.select {|p| p.thumbnails.size <= 1 }
-        print " (#{with_thumbnails.size} total): "
+      ENV['MODELS'].split(',').each do |model|
+        with_thumbnails = eval(model).all(:conditions => {:parent_id => nil})
+        printf "Regenerating all %s thumbnails (%s total): ", model, with_thumbnails.size
         with_thumbnails.each do |r|
-          if p.data
+          if r.respond_to?(:process_attachment_with_processing) && r.thumbnailable? && !r.attachment_options[:thumbnails].blank? && r.parent_id.nil?
             print '.'
+            temp_file = r.create_temp_file
+            r.attachment_options[:thumbnails].each do |suffix, value|
+              if value.is_a?(Hash)
+                r.create_or_update_thumbnail(temp_file, suffix, *value[:size], &value[:proc])
+              else
+                r.create_or_update_thumbnail(temp_file, suffix, *value)
+              end
+            end
           else
             print '!'
             next
-          end
-          temp_file = p.create_temp_file
-          p.attachment_options[:thumbnails].each do |suffix, value|
-            if value.is_a?(Hash)
-              create_or_update_thumbnail(temp_file, suffix, *value[:size], &value[:proc])
-            else
-              create_or_update_thumbnail(temp_file, suffix, *value)
-            end
           end
         end
         puts
