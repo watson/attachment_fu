@@ -8,6 +8,7 @@ namespace :attachment_fu do
         with_thumbnails = eval(model).all(:conditions => {:parent_id => nil})
         printf "Regenerating all %s thumbnails (%s total): ", model, with_thumbnails.size
         STDOUT.flush
+        skipped = []
         with_thumbnails.each do |r|
           if r.respond_to?(:process_attachment_with_processing) && r.thumbnailable? && !r.attachment_options[:thumbnails].blank? && r.parent_id.nil?
             temp_file = r.create_temp_file
@@ -21,8 +22,15 @@ namespace :attachment_fu do
             print '.'
           else
             print '!'
+            skipped << r
           end
           STDOUT.flush
+        end
+        if skipped.empty?
+          puts
+        else
+          puts "\nThe following files where skipped:"
+          skipped.each { |r| puts format("  %s (%s)", r.filename, r.content_type) }
         end
         puts
       end
